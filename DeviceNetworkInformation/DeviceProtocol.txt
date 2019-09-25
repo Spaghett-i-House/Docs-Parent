@@ -1,0 +1,114 @@
+1: Connection to server 1
+    Server Sends over UDP
+    {
+        "cmd": "connection_request",
+        "id": (insert message id),
+        "body": {
+            "address": (insert server address)
+            "port": (insert server port)
+        }
+    }
+    Client responds over UDP
+    {
+        "cmd": "ack",
+        "id": (insert server message id)
+        "body": {}
+    }
+
+    If Server receives ack, it does nothing:
+        Client Connects to Server TCP Server
+        Look section 2
+    If Server does not receive ack:
+        retransmit 10 times
+        if completed signal client was not available
+
+2: TCP Connection
+    Server Accepts connection from client
+
+    Server asks client for information about device polling once a second
+    {
+        "cmd": "information_request",
+        "id": (insert message id)
+        "body": {}
+    }
+
+    Client Responds with audio device information
+    {
+        "cmd": "information_response",
+        "id": (insert original request message id),
+        "body":{
+            "devices": [
+                "name": "",
+                "baud_support": [int],
+            ],
+            "available_commands": {
+                "command_name_1": [
+                    {"argname": "argtype"},
+                    {....}
+                ],
+                "command_name_2": [
+                    {"argname": .....},
+                    ....
+                ]
+            }
+            "state information": {
+                "active_data_streams": ["device_names"]
+            }
+        }
+    }
+    
+
+    or no information response is received by server and TCP connection is broken
+
+3: Commands
+    Server cannot send a command until at least 1 information response has been received
+    if no information response has been received, a new one can be sent
+
+    Server sends
+    {
+        "cmd": "control",
+        "id": "insert message id",
+        "body": {
+            "command_name": "(insert command name)",
+            "args": [
+                (insert arg1),
+                (insert arg2)
+            ]
+        }
+    }
+    
+    if all arguments are correct type and function is valid:
+        Client Sends
+        {
+            "cmd": "control_ack",
+            "id": "original server message id",
+            "body": {
+                "warnings": [], //can be populated
+                "errors": [], //should not have anything in it
+            }
+        }
+        Signaling server the command has been executed
+    else
+        {
+            "cmd": "control_ack",
+            "id": "original server message id",
+            "body": {
+                "warnings": [], //can be populated
+                "errors": [], //will be populated
+            }
+        }
+        Signaling the server the command has not been executed
+
+4: Audio
+    The server should have sent a command to start the flow of audio
+
+    Client sends 
+    {
+        "cmd": "audio",
+        "body": {
+            "data": []
+        }
+    }
+
+    Server does not respond but adds audio to queue to be processed and sent to web client
+
